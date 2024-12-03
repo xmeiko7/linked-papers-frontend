@@ -1,9 +1,9 @@
 <template>
   <div>
     <h1>{{ paper.title }}</h1>
-    <p><strong>作者：</strong>{{ paper.author }}</p>
+    <p><strong>发布日期</strong>{{ paper.year }}</p>
     <p>论文类别：{{ paper.category }}</p>
-    <p>摘要内容：{{ paper.summary }}</p>
+    <p>摘要内容：{{ paper.abstract }}</p>
 
     <div class="buttons">
       <button @click="loadCitedPapers">引用论文</button>
@@ -14,25 +14,37 @@
     <!-- 引用论文内容展示区域 -->
     <div v-if="showCitedPapers" class="paper-list">
       <h3>引用论文</h3>
-      <ul>
-        <li v-for="(paper, index) in citedPapers" :key="index">{{ paper.title }}</li>
-      </ul>
+      <div class="paper-card" v-for="(paper, index) in citedPapers" :key="index">
+        <router-link :to="`/paper/${paper.id}`">
+          <div class="card">
+            <h4>{{ paper.title }}</h4>
+          </div>
+        </router-link>
+      </div>
     </div>
 
     <!-- 相似论文内容展示区域 -->
     <div v-if="showSimilarPapers" class="paper-list">
       <h3>相似论文</h3>
-      <ul>
-        <li v-for="(paper, index) in similarPapers" :key="index">{{ paper.title }}</li>
-      </ul>
+      <div class="paper-card" v-for="(paper, index) in similarPapers" :key="index">
+        <router-link :to="`/paper/${paper.id}`">
+          <div class="card">
+            <h4>{{ paper.title }}</h4>
+          </div>
+        </router-link>
+      </div>
     </div>
 
     <!-- 同类论文内容展示区域 -->
     <div v-if="showSameCategoryPapers" class="paper-list">
       <h3>同类论文</h3>
-      <ul>
-        <li v-for="(paper, index) in sameCategoryPapers" :key="index">{{ paper.title }}</li>
-      </ul>
+      <div class="paper-card" v-for="(paper, index) in sameCategoryPapers" :key="index">
+        <router-link :to="`/paper/${paper.id}`">
+          <div class="card">
+            <h4>{{ paper.title }}</h4>
+          </div>
+        </router-link>
+      </div>
     </div>
 
     <!-- 加载状态 -->
@@ -43,32 +55,46 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
-  props: ['id', 'userRole'], // 新增 userRole 属性来区分用户角色
+  props: ['id', 'userRole'],
   data() {
     return {
       paper: {
         title: '论文标题',
-        author: '作者姓名',
+        year: 2023,
         category: '计算机科学',
-        summary: '论文摘要内容...',
+        abstract: '论文摘要内容...',
       },
-      citedPapers: [], // 引用论文列表
-      similarPapers: [], // 相似论文列表
-      sameCategoryPapers: [], // 同类论文列表
-      loading: false, // 加载状态
-      showCitedPapers: false, // 是否显示引用论文
-      showSimilarPapers: false, // 是否显示相似论文
-      showSameCategoryPapers: false, // 是否显示同类论文
+      citedPapers: [],
+      similarPapers: [],
+      sameCategoryPapers: [],
+      loading: false,
+      showCitedPapers: false,
+      showSimilarPapers: false,
+      showSameCategoryPapers: false,
     };
   },
   computed: {
     isVip() {
-      // return this.userRole === 'VIP'; // 判断当前用户是否为 VIP 用户
       return true; // 假设当前用户为 VIP 用户
     },
   },
   methods: {
+    async fetchPaperDetail() {
+      this.loading = true;
+      try {
+        const response = await axios.get(`http://127.0.0.1:5000/paper_details?paper_id=${this.id}`);
+        this.paper = response.data;
+        console.log('论文详情:', this.paper); // 打印论文详情
+      } catch (error) {
+        console.error('加载论文详情失败:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async loadCitedPapers() {
       this.loading = true;
       this.showCitedPapers = true;
@@ -76,9 +102,8 @@ export default {
       this.showSameCategoryPapers = false;
 
       try {
-        // 模拟 API 请求：获取引用论文的数据
-        const response = await fetch(`https://api.example.com/citedPapers/${this.id}`);
-        this.citedPapers = await response.json();
+        const response = await axios.get(`http://127.0.0.1:5000/citations_by_index?paper_index=${this.id}&page=1&per_page=5`);
+        this.citedPapers = response.data;
       } catch (error) {
         console.error('加载引用论文失败:', error);
       } finally {
@@ -87,7 +112,7 @@ export default {
     },
 
     async loadSimilarPapers() {
-      if (!this.isVip) return; // 如果不是 VIP 用户，直接返回
+      if (!this.isVip) return;
 
       this.loading = true;
       this.showCitedPapers = false;
@@ -95,9 +120,17 @@ export default {
       this.showSameCategoryPapers = false;
 
       try {
-        // 模拟 API 请求：获取相似论文的数据
-        const response = await fetch(`https://api.example.com/similarPapers/${this.id}`);
-        this.similarPapers = await response.json();
+        // 获取保存在 localStorage 中的 token
+        const token = localStorage.getItem('token');
+
+        // 如果 token 存在，将其添加到请求头中
+        const response = await axios.get(`http://127.0.0.1:5000/similar_papers?paper_id=${this.id}&k=5&page=1&per_page=5`, {
+          headers: {
+            'Authorization': `Bearer ${token}`  // 将 token 加入到请求头中
+          }
+        });
+
+        this.similarPapers = response.data;
       } catch (error) {
         console.error('加载相似论文失败:', error);
       } finally {
@@ -106,17 +139,14 @@ export default {
     },
 
     async loadSameCategoryPapers() {
-      if (!this.isVip) return; // 如果不是 VIP 用户，直接返回
-
       this.loading = true;
       this.showCitedPapers = false;
       this.showSimilarPapers = false;
       this.showSameCategoryPapers = true;
 
       try {
-        // 模拟 API 请求：获取同类论文的数据
-        const response = await fetch(`https://api.example.com/sameCategoryPapers/${this.id}`);
-        this.sameCategoryPapers = await response.json();
+        const response = await axios.get(`http://127.0.0.1:5000/search_by_category?category=${this.paper.category}&page=1&per_page=5`);
+        this.sameCategoryPapers = response.data;
       } catch (error) {
         console.error('加载同类论文失败:', error);
       } finally {
@@ -124,46 +154,61 @@ export default {
       }
     },
   },
+
+  watch: {
+    id(newId, oldId) {
+      if (newId !== oldId) {
+        this.fetchPaperDetail();  // 当 id 改变时重新加载数据
+      }
+    }
+  },
+
+  created() {
+    // 初次加载数据
+    this.fetchPaperDetail();
+  }
 };
 </script>
 
+
 <style scoped>
-h1 {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-p {
-  font-size: 16px;
-}
-
-.buttons button {
-  margin-top: 10px;
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
+/* 基本卡片样式 */
 .paper-list {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr); /* 单列布局 */
+  gap: 20px; /* 卡片之间的间距 */
   margin-top: 20px;
+  width: 80%; /* 设置宽度为页面的 80% */
+  margin-left: auto; /* 水平居中 */
+  margin-right: auto; /* 水平居中 */
 }
 
-.paper-list ul {
-  list-style-type: none;
-  padding: 0;
+/* 卡片的样式 */
+.paper-card {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out; /* 鼠标悬停时的过渡效果 */
 }
 
-.paper-list li {
-  margin: 5px 0;
+.paper-card:hover {
+  transform: translateY(-5px); /* 鼠标悬停时卡片微微上升 */
 }
 
-.loading {
-  margin-top: 20px;
-  font-size: 16px;
-  color: #888;
+.card h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.card p {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.card strong {
+  font-weight: bold;
 }
 </style>

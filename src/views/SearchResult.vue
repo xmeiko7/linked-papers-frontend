@@ -6,18 +6,18 @@
         <router-link :to="`/paper/${paper.id}`">
           <div class="card">
             <h3>{{ paper.title }}</h3>
-            <p><strong>作者：</strong>{{ paper.author }}</p>
-            <p>{{ paper.summary }}</p>
           </div>
         </router-link>
       </div>
     </div>
+    <!-- 分页组件 -->
     <pagination :page="currentPage" :total-pages="totalPages" @page-changed="onPageChanged" />
   </div>
 </template>
 
 <script>
 import Pagination from '../components/PaginationTool.vue';
+import axios from 'axios';
 
 export default {
   components: {
@@ -26,30 +26,22 @@ export default {
   props: ['query'],  // 从路由传递的查询参数
   data() {
     return {
-      papers: [
-        // 示例数据，实际情况根据查询结果返回
-        { id: 1, title: '搜索论文1', author: '作者1', summary: '摘要内容1' },
-        { id: 2, title: '搜索论文2', author: '作者2', summary: '摘要内容2' },
-        { id: 3, title: '搜索论文3', author: '作者3', summary: '摘要内容3' },
-        { id: 4, title: '搜索论文4', author: '作者4', summary: '摘要内容4' },
-        { id: 5, title: '搜索论文5', author: '作者5', summary: '摘要内容5' },
-        { id: 6, title: '搜索论文6', author: '作者6', summary: '摘要内容6' },
-        { id: 7, title: '搜索论文7', author: '作者7', summary: '摘要内容7' },
-        // 更多数据...
-      ],
-      currentPage: 1,
-      papersPerPage: 5,  // 每页展示5篇论文
-      totalPages: 5,     // 假设总共有5页
+      papers: [],         // 存放搜索结果
+      currentPage: 1,     // 当前页
+      papersPerPage: 10,   // 每页显示的论文数量
+      totalPages: 5,      // 总页数，初始值为 1
     };
   },
   computed: {
     paginatedPapers() {
-      // 计算当前页应展示的论文数据
-      const start = (this.currentPage - 1) * this.papersPerPage;
-      const end = start + this.papersPerPage;
-      return this.papers.slice(start, end);
-    },
+      if (!this.papers || this.papers.length === 0) {
+        return []; // 返回空数组
+      }
+      // const startIndex = (this.currentPage - 1) * this.papersPerPage;
+      return this.papers.slice(0,10); // 根据当前页和每页数量来分页
+    }
   },
+
   watch: {
     query(newQuery) {
       // 每次查询变更时刷新结果
@@ -57,22 +49,49 @@ export default {
     }
   },
   methods: {
-    searchPapers(query) {
-      // 根据查询内容获取数据，假设调用接口获取搜索结果
-      console.log('搜索查询:', query);
+    async searchPapers(query) {
+      console.log('当前查询:', query);  // 检查 query 的值
+      if (!query.trim()) {
+        this.papers = [];
+        this.totalPages = 1;  // 清空时总页数设为 1
+        return;
+      }
+
+      try {
+        const response = await axios.get('http://127.0.0.1:5000/search', {
+          params: {
+            keyword: query,
+            page: this.currentPage,  // 当前页
+            per_page: this.papersPerPage,  // 每页数量
+          }
+        });
+        // 更新数据
+        this.papers = response.data;  // 假设返回的数据包含一个 'papers' 数组
+        console.log(this.papers);
+
+      } catch (error) {
+        console.error('搜索请求失败:', error);
+        this.papers = [];
+        this.totalPages = 1;  // 出现错误时设置总页数为 1
+      }
+
     },
     onPageChanged(page) {
-      this.currentPage = page;
-      // 调用接口获取新的论文数据
+      this.currentPage = page; // 更新当前页
+      this.searchPapers(this.query);  // 重新查询数据
     },
   },
+  created() {
+    // 初始化时进行查询
+    this.searchPapers(this.query);
+  }
 };
 </script>
 
 <style scoped>
 .paper-list {
   display: grid;
-  grid-template-columns: repeat(1, 5fr); /* 每行 5 个卡片 */
+  grid-template-columns: repeat(2, 5fr); /* 每行 5 个卡片 */
   gap: 20px; /* 卡片之间的间距 */
 }
 
@@ -82,7 +101,7 @@ export default {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   text-align: left; /* 使卡片内容左对齐 */
-  height: 200px; /* 固定高度 */
+  height: 100px; /* 固定高度 */
 }
 
 .paper-card h3 {

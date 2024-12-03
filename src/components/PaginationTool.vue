@@ -20,6 +20,7 @@ export default {
     changePage(newPage) {
       if (newPage >= 1 && newPage <= this.totalPages) {
         this.$emit('page-changed', newPage);
+        console.log('页码改变:', newPage);
       }
     },
   },

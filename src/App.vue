@@ -18,7 +18,7 @@
       <div class="login-container">
         <button
             v-if="!isLoggedIn"
-            @click="showLoginModal = true; console.log('Modal should show: ', showLoginModal)"
+            @click="showLoginModal = true; currentForm = 'login'"
             class="login-btn"
         >
           登录
@@ -49,26 +49,57 @@
       </div>
     </header>
 
-    <!-- 弹出登录界面 -->
+    <!-- 弹出登录或注册界面 -->
     <div v-if="showLoginModal" class="login-modal">
       <div class="login-modal-content">
-        <h3>登录</h3>
-        <input
-            v-model="username"
-            type="text"
-            placeholder="账号"
-            class="input-field"
-        />
-        <input
-            v-model="password"
-            type="password"
-            placeholder="密码"
-            class="input-field"
-        />
-        <div class="modal-actions">
+        <h3>{{ currentForm === 'login' ? '登录' : '注册' }}</h3>
+
+        <!-- 登录表单 -->
+        <div v-if="currentForm === 'login'">
+          <input
+              v-model="email"
+              type="email"
+              placeholder="邮箱"
+              class="input-field"
+          />
+          <input
+              v-model="password"
+              type="password"
+              placeholder="密码"
+              class="input-field"
+          />
           <button @click="login" class="login-action-btn">登录</button>
-          <button @click="register" class="login-action-btn">注册</button>
+          <p>
+            没有账号？ <span @click="switchToRegister" class="switch-btn">注册</span>
+          </p>
         </div>
+
+        <!-- 注册表单 -->
+        <div v-if="currentForm === 'register'">
+          <input
+              v-model="username"
+              type="text"
+              placeholder="昵称"
+              class="input-field"
+          />
+          <input
+              v-model="email"
+              type="email"
+              placeholder="邮箱"
+              class="input-field"
+          />
+          <input
+              v-model="password"
+              type="password"
+              placeholder="密码"
+              class="input-field"
+          />
+          <button @click="register" class="login-action-btn">注册</button>
+          <p>
+            已有账号？ <span @click="switchToLogin" class="switch-btn">登录</span>
+          </p>
+        </div>
+
         <button @click="showLoginModal = false" class="close-modal-btn">X</button>
       </div>
     </div>
@@ -81,23 +112,41 @@
 </template>
 
 <script>
+import axios from 'axios'; // 引入 axios
+
 export default {
-  data() {
-    return {
-      searchQuery: "",  // 搜索框绑定的内容
-      showLoginModal: false,
-      username: "",
-      password: "",
-      isLoggedIn: false, // 用户登录状态
-      isVIP: false,      // 用户VIP状态
-      isMenuOpen: false, // 控制下拉菜单是否展开
-      papers: [
-        { title: "论文1", author: "作者1", summary: "摘要1" },
-        { title: "论文2", author: "作者2", summary: "摘要2" },
-        { title: "论文3", author: "作者3", summary: "摘要3" },
-      ],
-    };
+  async loadSimilarPapers() {
+    if (!this.isVIP) return;
+
+    this.loading = true;
+    this.showCitedPapers = false;
+    this.showSimilarPapers = true;
+    this.showSameCategoryPapers = false;
+
+    try {
+      // 直接从 app.vue 中获取 accessToken
+      const token = this.accessToken;  // 从 Vue 实例中获取
+
+      if (!token) {
+        console.error("Token is missing. Please log in first.");
+        return;
+      }
+
+      // 发送请求并在 headers 中加入 token
+      const response = await axios.get(`http://127.0.0.1:5000/similar_papers?paper_id=${this.id}&page=1&per_page=5`, {
+        headers: {
+          'Authorization': `Bearer ${token}`  // 将 token 加入到请求头中
+        }
+      });
+
+      this.similarPapers = response.data;
+    } catch (error) {
+      console.error('加载相似论文失败:', error);
+    } finally {
+      this.loading = false;
+    }
   },
+
   methods: {
     search() {
       console.log("搜索内容：", this.searchQuery);
@@ -106,11 +155,41 @@ export default {
         console.log("跳转到搜索结果页面");
       }
     },
-    login() {
+    // 登录函数
+    async login() {
       console.log("登录中...");
-      this.isLoggedIn = true; // 设置为已登录状态
-      this.username = "用户123"; // 模拟用户名
-      this.showLoginModal = false; // 关闭登录模态框
+      if (!this.email || !this.password) {
+        alert("请输入邮箱和密码！");
+        return;
+      }
+
+      try {
+        // 发送登录请求
+        const response = await axios.post('http://127.0.0.1:5000/user/login', {
+          email: this.email,
+          password: this.password
+        });
+
+        if (response.status === 200) {
+          // 获取到 token 并保存
+          this.accessToken = response.data.access_token;
+          localStorage.setItem('access_token', this.accessToken);  // 存储在浏览器的 localStorage 中
+
+          this.isLoggedIn = true;
+          this.username = "用户123"; // 模拟用户名，实际应该根据登录返回值设置
+          this.showLoginModal = false;
+        }
+      } catch (error) {
+        if (error.response) {
+          if (error.response.status === 401) {
+            alert("无效的邮箱或密码！");
+          } else if (error.response.status === 400) {
+            alert("缺少必要字段！");
+          }
+        } else {
+          alert("发生错误，请稍后再试！");
+        }
+      }
     },
     logout() {
       console.log("退出登录...");
@@ -118,27 +197,71 @@ export default {
       this.isVIP = false;
       this.username = "";
       this.isMenuOpen = false; // 退出登录后关闭菜单
+      localStorage.removeItem('access_token');  // 清除 token
     },
     toggleMenu() {
-      console.log("Menu toggled");  // 用于调试
+      console.log("Menu toggled");
       this.isMenuOpen = !this.isMenuOpen;
     },
     upgradeToVIP() {
       console.log("升级为VIP...");
       this.isVIP = true; // 用户成为VIP
     },
-    register() {
-      console.log("跳转到注册页面...");
+    async register() {
+      console.log("注册中...");
+      if (!this.username || !this.email || !this.password) {
+        alert("请填写完整的注册信息！");
+        return;
+      }
+
+      try {
+        const response = await axios.post('http://127.0.0.1:5000/user/register', {
+          username: this.username,
+          email: this.email,
+          password: this.password,
+        });
+
+        if (response.status === 201) {
+          console.log("注册成功：", response.data.message);
+          alert("注册成功！");
+          this.showLoginModal = false;
+        }
+      } catch (error) {
+        if (error.response) {
+          if (error.response.status === 400) {
+            alert("缺少必要字段，请检查输入！");
+          } else if (error.response.status === 409) {
+            alert("用户名或邮箱已存在！");
+          }
+        } else {
+          alert("发生错误，请稍后再试！");
+        }
+      }
+    },
+    switchToRegister() {
+      this.currentForm = 'register';
+    },
+    switchToLogin() {
+      this.currentForm = 'login';
     },
     goHome() {
       this.$router.push({ name: 'HomePage' });
     },
   },
+  created() {
+    // 检查 localStorage 中是否有 token
+    const storedToken = localStorage.getItem('access_token');
+    if (storedToken) {
+      this.accessToken = storedToken;
+      this.isLoggedIn = true;
+      this.username = "用户123";  // 实际应用时应从后端获取用户信息
+    }
+  }
 };
 </script>
 
 <style scoped>
-/* 样式部分 */
+/* 样式部分与之前保持一致 */
 header {
   display: flex;
   justify-content: space-between;
@@ -185,72 +308,9 @@ header {
   cursor: pointer;
 }
 
-/* 登录模态框样式 */
-.login-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* 半透明的背景 */
+.login-container {
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000; /* 确保模态框在最上层 */
-}
-
-/* 登录模态框内容 */
-.login-modal-content {
-  position: relative; /* 确保模态框内容区域有相对定位 */
-  background-color: white;
-  padding: 20px;
-  width: 300px;
-  border-radius: 8px;
-  text-align: center;
-}
-
-/* 输入框 */
-.input-field {
-  width: 75%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-}
-
-/* 按钮容器 */
-.modal-actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 40px;
-}
-
-/* 登录、注册按钮 */
-.login-action-btn {
-  padding: 8px 16px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-}
-
-/* 关闭按钮 */
-.close-modal-btn {
-  margin-top: 20px;
-  cursor: pointer;
-  background-color: #ff4d4d; /* 设置红色背景 */
-  color: white; /* 设置文字颜色 */
-  border: none;
-  padding: 5px;
-  border-radius: 8px;
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-.close-modal-btn:hover {
-  background-color: #e60000; /* 鼠标悬停时的深红色 */
 }
 
 .login-btn {
@@ -263,36 +323,33 @@ header {
 }
 
 .welcome-message {
-  font-size: 16px;
-  color: white;
+  display: flex;
+  align-items: center;
+  margin-left: 20px;
 }
 
 .username {
   cursor: pointer;
-  text-decoration: underline;
 }
 
 .dropdown-menu {
   position: absolute;
-  background-color: white;
+  background-color: #fff;
+  color: #333;
   top: 40px;
-  right: 0;
-  width: 180px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  right: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 10px;
-  z-index: 10;
+  border-radius: 8px;
 }
 
 .vip-btn {
-  width: 100%;
-  padding: 8px;
-  background-color: #007bff;
+  background-color: #FFD700;
   color: white;
   border: none;
-  border-radius: 8px;
+  padding: 6px 12px;
   cursor: pointer;
-  margin-bottom: 10px;
+  border-radius: 8px;
 }
 
 .vip-btn.disabled {
@@ -301,12 +358,64 @@ header {
 }
 
 .logout-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.login-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+}
+
+.input-field {
   width: 100%;
   padding: 8px;
-  background-color: #ff4d4d;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.login-action-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
   color: white;
   border: none;
   border-radius: 8px;
+  cursor: pointer;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+}
+
+.switch-btn {
+  color: #007bff;
   cursor: pointer;
 }
 </style>
