@@ -121,7 +121,8 @@ export default {
 
       try {
         // 获取保存在 localStorage 中的 token
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
+        console.log(token);
 
         // 如果 token 存在，将其添加到请求头中
         const response = await axios.get(`http://127.0.0.1:5000/similar_papers?paper_id=${this.id}&k=5&page=1&per_page=5`, {

@@ -115,48 +115,37 @@
 import axios from 'axios'; // 引入 axios
 
 export default {
-  async loadSimilarPapers() {
-    if (!this.isVIP) return;
-
-    this.loading = true;
-    this.showCitedPapers = false;
-    this.showSimilarPapers = true;
-    this.showSameCategoryPapers = false;
-
-    try {
-      // 直接从 app.vue 中获取 accessToken
-      const token = this.accessToken;  // 从 Vue 实例中获取
-
-      if (!token) {
-        console.error("Token is missing. Please log in first.");
-        return;
-      }
-
-      // 发送请求并在 headers 中加入 token
-      const response = await axios.get(`http://127.0.0.1:5000/similar_papers?paper_id=${this.id}&page=1&per_page=5`, {
-        headers: {
-          'Authorization': `Bearer ${token}`  // 将 token 加入到请求头中
-        }
-      });
-
-      this.similarPapers = response.data;
-    } catch (error) {
-      console.error('加载相似论文失败:', error);
-    } finally {
-      this.loading = false;
-    }
+  data() {
+    return {
+      searchQuery: "",  // 搜索框绑定的内容
+      showLoginModal: false, // 控制登录模态框显示
+      currentForm: 'login', // 控制当前表单是登录还是注册
+      username: "",  // 用户名（注册时使用）
+      email: "",     // 邮箱
+      password: "",  // 密码
+      isLoggedIn: false, // 用户登录状态
+      isVIP: false,      // 用户VIP状态
+      isMenuOpen: false, // 控制下拉菜单是否展开
+      accessToken: "",   // 存储JWT访问令牌
+      papers: [
+        { title: "论文1", author: "作者1", summary: "摘要1" },
+        { title: "论文2", author: "作者2", summary: "摘要2" },
+        { title: "论文3", author: "作者3", summary: "摘要3" },
+      ],
+    };
   },
-
   methods: {
     search() {
       console.log("搜索内容：", this.searchQuery);
       if (this.searchQuery.trim() !== "") {
-        this.$router.push({ name: 'SearchResult', query: { query: this.searchQuery } });
+        this.$router.push({name: 'SearchResult', query: {query: this.searchQuery}});
         console.log("跳转到搜索结果页面");
       }
     },
-    // 登录函数
     async login() {
+      console.log("登录中...");
+      // 这里模拟登录成功
+
       console.log("登录中...");
       if (!this.email || !this.password) {
         alert("请输入邮箱和密码！");
@@ -174,7 +163,8 @@ export default {
           // 获取到 token 并保存
           this.accessToken = response.data.access_token;
           localStorage.setItem('access_token', this.accessToken);  // 存储在浏览器的 localStorage 中
-
+          console.log("Token:", this.accessToken)
+          console.log("token:", localStorage.getItem("access_token"));
           this.isLoggedIn = true;
           this.username = "用户123"; // 模拟用户名，实际应该根据登录返回值设置
           this.showLoginModal = false;
@@ -190,6 +180,10 @@ export default {
           alert("发生错误，请稍后再试！");
         }
       }
+
+      this.isLoggedIn = true;
+      this.username = "用户123"; // 模拟用户名
+      this.showLoginModal = false;
     },
     logout() {
       console.log("退出登录...");
@@ -197,7 +191,6 @@ export default {
       this.isVIP = false;
       this.username = "";
       this.isMenuOpen = false; // 退出登录后关闭菜单
-      localStorage.removeItem('access_token');  // 清除 token
     },
     toggleMenu() {
       console.log("Menu toggled");
@@ -245,23 +238,14 @@ export default {
       this.currentForm = 'login';
     },
     goHome() {
-      this.$router.push({ name: 'HomePage' });
+      this.$router.push({name: 'HomePage'});
     },
   },
-  created() {
-    // 检查 localStorage 中是否有 token
-    const storedToken = localStorage.getItem('access_token');
-    if (storedToken) {
-      this.accessToken = storedToken;
-      this.isLoggedIn = true;
-      this.username = "用户123";  // 实际应用时应从后端获取用户信息
-    }
-  }
 };
 </script>
 
 <style scoped>
-/* 样式部分与之前保持一致 */
+/* 样式部分与之前保持一致，以下为简化版 */
 header {
   display: flex;
   justify-content: space-between;
@@ -308,85 +292,33 @@ header {
   cursor: pointer;
 }
 
-.login-container {
-  display: flex;
-  align-items: center;
-}
-
-.login-btn {
-  padding: 8px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.welcome-message {
-  display: flex;
-  align-items: center;
-  margin-left: 20px;
-}
-
-.username {
-  cursor: pointer;
-}
-
-.dropdown-menu {
-  position: absolute;
-  background-color: #fff;
-  color: #333;
-  top: 40px;
-  right: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.vip-btn {
-  background-color: #FFD700;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  cursor: pointer;
-  border-radius: 8px;
-}
-
-.vip-btn.disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.logout-btn {
-  background-color: #f44336;
-  color: white;
-  padding: 6px 12px;
-  border: none;
-  cursor: pointer;
-  border-radius: 8px;
-}
-
+/* 登录模态框样式 */
 .login-modal {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明的背景 */
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000; /* 确保模态框在最上层 */
 }
 
+/* 登录模态框内容 */
 .login-modal-content {
-  background-color: #fff;
+  position: relative; /* 确保模态框内容区域有相对定位 */
+  background-color: white;
   padding: 20px;
-  border-radius: 10px;
-  width: 400px;
+  width: 300px;
+  border-radius: 8px;
+  text-align: center;
 }
 
+/* 输入框 */
 .input-field {
-  width: 100%;
+  width: 75%;
   padding: 8px;
   margin-bottom: 10px;
   border-radius: 8px;
@@ -394,12 +326,18 @@ header {
 }
 
 .login-action-btn {
-  width: 100%;
+  width: 80%;
   padding: 10px;
-  background-color: #007bff;
+  margin-top: 10px;
+  background-color: #28a745;
   color: white;
   border: none;
   border-radius: 8px;
+  cursor: pointer;
+}
+
+.switch-btn {
+  color: #007bff;
   cursor: pointer;
 }
 
@@ -409,13 +347,8 @@ header {
   right: 10px;
   background-color: transparent;
   border: none;
-  font-size: 20px;
-  color: #333;
+  font-size: 18px;
   cursor: pointer;
 }
 
-.switch-btn {
-  color: #007bff;
-  cursor: pointer;
-}
 </style>
