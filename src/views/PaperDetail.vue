@@ -7,8 +7,8 @@
 
     <div class="buttons">
       <button @click="loadCitedPapers">引用论文</button>
-      <button v-if="isVip" @click="loadSimilarPapers">相似论文</button>
       <button v-if="isVip" @click="loadSameCategoryPapers">同类论文</button>
+      <button v-if="isVip" @click="loadSimilarPapers">相似论文</button>
     </div>
 
     <!-- 引用论文内容展示区域 -->
@@ -133,6 +133,7 @@ export default {
 
         this.similarPapers = response.data;
       } catch (error) {
+        alert("请先升级为VIP用户");
         console.error('加载相似论文失败:', error);
       } finally {
         this.loading = false;
@@ -173,6 +174,33 @@ export default {
 
 
 <style scoped>
+  /* 基本按钮样式 */
+.buttons {
+  display: flex;
+  gap: 15px; /* 按钮之间的垂直间距 */
+  margin-top: 20px;
+}
+
+button {
+  background-color: #007bff; /* 设置按钮背景色 */
+  color: white;  /* 设置文字颜色 */
+  border: none;  /* 去掉按钮边框 */
+  padding: 10px 20px;  /* 设置内边距 */
+  font-size: 16px;  /* 设置字体大小 */
+  border-radius: 5px;  /* 设置圆角 */
+  cursor: pointer;  /* 鼠标悬停时显示为指针 */
+  transition: background-color 0.3s, transform 0.3s;  /* 添加平滑的过渡效果 */
+}
+
+button:hover {
+  background-color: #007bff;  /* 鼠标悬停时按钮颜色变化 */
+  transform: scale(1.05);  /* 鼠标悬停时稍微放大按钮 */
+}
+
+button:disabled {
+  background-color: #ccc;  /* 禁用状态时改变按钮颜色 */
+  cursor: not-allowed;  /* 禁用时显示禁止符号 */
+}
 /* 基本卡片样式 */
 .paper-list {
   display: grid;

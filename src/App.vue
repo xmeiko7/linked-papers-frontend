@@ -144,9 +144,6 @@ export default {
     },
     async login() {
       console.log("登录中...");
-      // 这里模拟登录成功
-
-      console.log("登录中...");
       if (!this.email || !this.password) {
         alert("请输入邮箱和密码！");
         return;
@@ -157,10 +154,13 @@ export default {
         const response = await axios.post('http://127.0.0.1:5000/user/login', {
           email: this.email,
           password: this.password
-        });
 
+        })
         if (response.status === 200) {
           // 获取到 token 并保存
+          this.isLoggedIn = true;
+          this.username = "用户123"; // 模拟用户名
+          this.showLoginModal = false;
           this.accessToken = response.data.access_token;
           localStorage.setItem('access_token', this.accessToken);  // 存储在浏览器的 localStorage 中
           console.log("Token:", this.accessToken)
@@ -180,10 +180,9 @@ export default {
           alert("发生错误，请稍后再试！");
         }
       }
-
-      this.isLoggedIn = true;
-      this.username = "用户123"; // 模拟用户名
-      this.showLoginModal = false;
+      // this.isLoggedIn = true;
+      // this.username = "用户123"; // 模拟用户名
+      // this.showLoginModal = false;
     },
     logout() {
       console.log("退出登录...");
@@ -196,8 +195,16 @@ export default {
       console.log("Menu toggled");
       this.isMenuOpen = !this.isMenuOpen;
     },
-    upgradeToVIP() {
+    async upgradeToVIP() {
       console.log("升级为VIP...");
+      try {
+        const response = await axios.post ('http://127.0.0.1:5000/user/upgrade_vip',{}) ;
+        if (response.status === 200) {
+          console.log("升级成功：");
+        }
+      }catch(error) {
+        alert("发生错误，请稍后再试！");
+      }
       this.isVIP = true; // 用户成为VIP
     },
     async register() {
@@ -324,7 +331,15 @@ header {
   border-radius: 8px;
   border: 1px solid #ccc;
 }
-
+/* 登录按钮样式 */
+.login-btn {
+  padding: 8px 16px; /* 与搜索按钮一致的内边距 */
+  background-color: #007bff; /* 与搜索按钮一致的背景颜色 */
+  color: white; /* 文字颜色 */
+  border: none;
+  border-radius: 8px; /* 圆角 */
+  cursor: pointer;
+}
 .login-action-btn {
   width: 80%;
   padding: 10px;

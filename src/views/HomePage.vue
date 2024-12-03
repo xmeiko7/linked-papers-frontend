@@ -1,101 +1,81 @@
-<!-- views/HomePage.vue -->
 <template>
   <div>
-    <h1>所有论文</h1>
+    <h1>推荐阅读</h1>
     <div class="paper-list">
-      <div v-for="(paper, index) in paginatedPapers" :key="index" class="paper-card">
+      <div v-for="(paper, index) in papers" :key="index" class="paper-card">
         <router-link :to="`/paper/${paper.id}`">
           <div class="card">
             <h3>{{ paper.title }}</h3>
-            <p><strong>作者：</strong>{{ paper.author }}</p>
-            <p>{{ paper.summary }}</p>
           </div>
         </router-link>
       </div>
     </div>
-    <pagination :page="currentPage" :total-pages="totalPages" @page-changed="onPageChanged" />
   </div>
 </template>
 
-
 <script>
-import Pagination from '../components/PaginationTool.vue';
-
 export default {
-  components: {
-    Pagination,
-  },
   data() {
     return {
       papers: [
-        { id: 1, title: '论文1', author: '作者1', summary: '摘要内容1' },
-        { id: 2, title: '论文2', author: '作者2', summary: '摘要内容2' },
-        { id: 3, title: '论文3', author: '作者3', summary: '摘要内容3' },
-        { id: 4, title: '论文4', author: '作者4', summary: '摘要内容4' },
-        { id: 5, title: '论文5', author: '作者5', summary: '摘要内容5' },
-        { id: 6, title: '论文6', author: '作者6', summary: '摘要内容6' },
-        { id: 7, title: '论文7', author: '作者7', summary: '摘要内容7' },
-        { id: 8, title: '论文8', author: '作者8', summary: '摘要内容8' },
-        { id: 9, title: '论文9', author: '作者9', summary: '摘要内容9' },
-        { id: 10, title: '论文10', author: '作者10', summary: '摘要内容10' },
-        { id: 11, title: '论文11', author: '作者11', summary: '摘要内容11' },
-        { id: 12, title: '论文12', author: '作者12', summary: '摘要内容12' },
-        // 更多数据...
-      ],
-      currentPage: 1,
-      papersPerPage: 5,  // 每页展示5篇论文
-      totalPages: 3,     // 假设总共有3页
+        {id: "39864",title: "Kf Cs Compressive Sensing on Kalman Filtered Residual"},
+        {id: "27969",title: "Ls Cs Residual Ls Cs Compressive Sensing on Least Squares Residual"},
+        {id: "49240",title: "Stability over Time of Modified Cs and Ls Cs for Recursive Causal Sparse Reconstruction"},
+        {id: "149301",title: "Support Predicted Modified Cs for Recursive Robust Principal Components Pursuit"},
+        {id: "3520",title: "Noise Folding Based on General Complete Perturbation in Compressed Sensing"},
+        {id: "163922",title: "The Tension Between Openness and Prudence in Ai Research"},
+        {id: "93837",title: "Ai Ethics in Industry a Research Framework"},
+        {id: "67583",title: "Founding the Domain of Ai Forensics"},
+        {id: "66261",title: "Responsible Ai by Design in Practice"},
+        {id: "146904",title: "Ten Ai Stepping Stones for Cybersecurity"},
+
+        ],
     };
-  },
-  computed: {
-    paginatedPapers() {
-      // 计算当前页应展示的论文数据
-      const start = (this.currentPage - 1) * this.papersPerPage;
-      const end = start + this.papersPerPage;
-      return this.papers.slice(start, end);
-    },
-  },
-  methods: {
-    onPageChanged(page) {
-      this.currentPage = page;
-      // 如果有接口，可以在此时获取新数据
-    },
-  },
+  }
 };
 </script>
 
 <style scoped>
+/* 设置纸张列表的布局为2列，每列宽度为1fr，且增加合理间距 */
+.paper-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 两列均分宽度 */
+  gap: 30px; /* 增加列和行之间的间距 */
+  margin-top: 20px;
+  padding: 0 20px; /* 添加左右内边距 */
+}
 
-
+/* 调整每个纸张卡片的样式 */
 .paper-card {
   background-color: #f9f9f9;
-  padding-left: 50px; /* 右侧内边距，防止内容紧贴右边缘 */
+  padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  text-align: left; /* 使卡片内容右对齐 */
-  justify-content: space-between; /* 保证文本内容有间距 */
-  height: 200px; /* 设置固定高度 */
-
+  text-align: left;
+  height: auto; /* 允许卡片根据内容自动调整高度 */
+  width: 90%; /* 让卡片占满整个网格 */
+  transition: transform 0.3s ease; /* 增加过渡效果 */
 }
 
+.paper-card:hover {
+  transform: scale(1.05); /* 鼠标悬停时放大卡片 */
+}
+
+/* 调整标题样式 */
 .paper-card h3 {
-  font-size: 18px;
+  font-size: 18px; /* 稍大的字体 */
   margin: 10px 0;
-  text-align: left; /* 标题右对齐 */
-  padding-right: 10px; /* 给标题加一些右边距 */
+  text-align: left;
 }
 
+/* 调整摘要样式 */
 .paper-card p {
-  font-size: 14px;
+  font-size: 14px; /* 适中的字体大小 */
   color: #555;
-  text-align: left; /* 摘要内容右对齐 */
-  padding-right: 10px; /* 给段落内容加一些右边距 */
+  margin-top: 8px; /* 给摘要一点间隙 */
 }
 
-/* 移除 router-link 的下划线 */
 router-link {
-  text-decoration: none; /* 确保 router-link 没有下划线 */
+  text-decoration: none; /* 移除下划线 */
 }
-
-/* 或者，如果你想直接移除所有 <a> 标签的下划线 */
 </style>
